@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>TTFB - Time to First Byte</title>
+	<link href="https://fonts.googleapis.com/css?family=Ubuntu" rel="stylesheet"> 
+	<style type="text/css">
+		* {
+			font-family: Ubuntu;
+		}
+
+		html, body {
+			height: 100%;
+		}
+
+		body {
+			margin: 0;
+			padding: 0;
+			background-color: #b9ce75;
+		}
+
+		#container {
+			position: relative;
+			text-align: center;
+			width: 800px;
+			min-height: 100%;
+			background-color: #ffffff;
+			margin: auto;
+		}
+
+		#title {
+			font-size: 40px;
+			font-weight: bold;
+			padding: 25px;
+		}
+
+		#explanation {
+			font-size: 16px;
+			padding: 20px;
+		}
+
+		#url {
+			font-size: 16px;
+			border: 1px solid #dedede;
+		}
+
+		#check {
+			border: 1px solid #dedede;
+			font-size: 16px;
+		}
+
+		#resultBox {
+			border:1px solid #dedede;
+			width: 70%;
+			height: 300px;
+			margin: 30px auto;
+			text-align: left;
+			font-size: 18px;
+		}
+	</style>
+	<script type="text/javascript">
+	function gogo(){
+		document.body.style.backgroundColor = '#b9ce75';
+		document.getElementById("resultBox").innerHTML = 'Waiting for response';
+		var request = new XMLHttpRequest();
+		request.open('GET', './?url=' + encodeURIComponent(document.getElementById("url").value), true);
+		request.onreadystatechange = function (event){
+
+			if (request.readyState === 4 && request.status === 200){
+
+				var data = JSON.parse(request.responseText);
+				var htmloutput = '';
+				var prevTime = data[0][1];
+				var error = null;
+				var datams = 0;
+				var processTime = data[0][1];
+				var guessingTime = 0;
+
+				for (var i = 0; i < data.length; i++){
+
+					var thistime = data[i][1] - prevTime;
+					prevTime = data[i][1];
+
+					if (data[i][0] === 'data'){ 
+						datams += thistime;
+						continue;
+					} else if (data[i][0] === 'erro'){
+						error = data[i][2];
+						document.body.style.backgroundColor = '#FF0000';
+						break;
+					}
+
+					var prefix = '';
+					var suffix = '';
+					var addText = '';
+
+					switch (data[i][0]){
+						case 'init':
+							prefix = 'Initialize : ';
+							suffix = ' ms';
+							break;
+						case 'sock':
+							prefix = 'Socket Initialize : ';
+							suffix = ' ms';
+							break;
+						case 'lkup': 
+							prefix = 'Host Lookup : ';
+							suffix = ' ms';
+							break;
+						case 'conn':
+							prefix = 'TCP Handshake : ';
+							suffix = ' ms';
+							guessingTime = thistime;
+							break;
+						case 'secc':
+							prefix = 'TLS/SSL Handshake : ';
+							suffix = ' ms';
+							break;
+						case 'resp':
+							prefix = '<p style="font-weight: bold; font-size:24px;">Time to First Byte Response : <span style="font-weight: bold; color: #0000ff">';
+							suffix = ' ms</span></p>';
+							guessingTime = thistime - guessingTime;
+							break;
+						case 'data':
+							break;
+						case 'endo':
+
+							prefix = 'Connection Close : ';
+
+							if (datams){
+								prefix = 'Data Receive : ' + datams + ' ms <br>' + prefix;
+							}
+							
+							suffix = ' ms';
+
+							processTime = data[i][1] - processTime;
+
+							break;
+
+					}
+
+					if (data[i][0] === 'resp'){
+						suffix += '&nbsp;&nbsp;(Guess) Server Script Process Time : <span style="font-weight: bold; color: #0000ff">' + guessingTime + ' ms</span><br>';
+					}
+
+					htmloutput += prefix + thistime + suffix + addText + '<br>';
+					
+				}
+
+				htmloutput += 'Total Process Time : <span style="font-weight: bold;">' + processTime + ' ms</span><br>';
+
+				document.getElementById("resultBox").innerHTML = error ? error : htmloutput;
+
+			}
+
+		}
+
+		request.send();
+	}
+	</script>
+</head>
+<body>
+<div id="container">
+	<div id="title">TTFB Checker</div>
+	<div id="explanation">Check your site's TTFB (Time to First Byte).</div>
+	<input id="url" type="text" value="https://" onpaste="this.value=''" onkeypress='if (event.keyCode == 13){ document.getElementById("check").click(); return false; }' size="46">
+	<button id="check" onclick="gogo()">GO</button>
+	<div id="resultBox"></div>
+</div>
+</body>
+</html>
