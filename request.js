@@ -1,3 +1,5 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // FOR SELF-SIGNED CERTIFICATE
+
 const http = require('http');
 const https = require('https');
 const url = require('url');
